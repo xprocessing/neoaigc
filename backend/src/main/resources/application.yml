@@ -1,0 +1,66 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: neoaigc-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/neoaigc?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+      enabled: true
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.neoaigc.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 腾讯混元AI配置
+hunyuan:
+  api:
+    secret-id: ${HUNYUAN_SECRET_ID:your-secret-id}
+    secret-key: ${HUNYUAN_SECRET_KEY:your-secret-key}
+    region: ${HUNYUAN_REGION:ap-guangzhou}
+    image-gen-endpoint: https://hunyuan.tencentcloudapi.com
+    timeout: 30000
+
+# 微信登录配置
+wechat:
+  app-id: ${WECHAT_APP_ID:your-wechat-app-id}
+  app-secret: ${WECHAT_APP_SECRET:your-wechat-app-secret}
+  redirect-uri: ${WECHAT_REDIRECT_URI:http://localhost:8080/api/auth/wechat/callback}
+  qr-code-url: https://open.weixin.qq.com/connect/qrconnect
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:your-jwt-secret-key-at-least-256-bits-long-for-security-please-change-this-in-production}
+  expiration: 604800000 # 7天（毫秒）
+  header: Authorization
+  prefix: Bearer
+
+# 文件上传配置
+file:
+  upload-path: ${FILE_UPLOAD_PATH:./uploads}
+  max-size: 50MB
+  allowed-types: jpg,jpeg,png,gif,mp4,webp
+
+# 日志配置
+logging:
+  level:
+    com.neoaigc: DEBUG
+    org.springframework.security: DEBUG

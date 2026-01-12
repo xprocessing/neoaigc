@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeoAI GC - AI图片视频生成平台</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7C4DFF',
+                        secondary: '#00E5FF',
+                        accent: '#FF4081',
+                        dark: '#121212',
+                        card: '#1E1E1E',
+                        surface: '#2D2D2D'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-dark text-white min-h-screen">
+    <div id="app">
+        <!-- Loading State -->
+        <div v-if="loading" class="fixed inset-0 bg-dark flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+                <p class="text-primary text-lg">Loading...</p>
+            </div>
+        </div>
+        
+        <!-- Login Modal -->
+        <div v-if="showLoginModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showLoginModal = false"></div>
+            <div class="relative bg-card rounded-2xl p-8 shadow-2xl border border-surface max-w-md w-full mx-4">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold mb-2">微信扫码登录</h2>
+                    <p class="text-gray-400">请使用微信扫描二维码登录后使用生成功能</p>
+                </div>
+                
+                <div v-if="showQrCodeInModal" class="space-y-6">
+                    <div class="bg-surface rounded-xl p-6">
+                        <div class="flex justify-center mb-4">
+                            <div class="w-64 h-64 bg-white rounded-xl flex items-center justify-center">
+                                <iframe :src="qrCodeUrl" class="w-full h-full rounded-xl" frameborder="0"></iframe>
+                            </div>
+                        </div>
+                        <p class="text-center text-gray-400 text-sm">
+                            请使用微信扫描二维码登录
+                        </p>
+                    </div>
+                    <button 
+                        @click="showLoginModal = false" 
+                        class="w-full bg-surface hover:bg-primary text-white py-3 rounded-xl transition-all duration-300">
+                        取消
+                    </button>
+                </div>
+                
+                <div v-else class="space-y-4">
+                    <div class="bg-surface rounded-xl p-6 text-center">
+                        <i data-lucide="scan" class="w-16 h-16 mx-auto mb-4 text-secondary"></i>
+                        <p class="text-gray-300 mb-4">使用微信扫码登录</p>
+                    </div>
+                    <button 
+                        @click="getQrCodeForModal" 
+                        class="w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-accent text-white py-3 rounded-xl transition-all duration-300 font-medium">
+                        获取登录二维码
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main App -->
+        <div v-if="!loading" class="flex min-h-screen">
+            <!-- Sidebar -->
+            <div class="w-64 bg-card border-r border-surface flex flex-col fixed h-full">
+                <div class="p-6 border-b border-surface">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        NeoAI GC
+                    </h1>
+                </div>
+                
+                <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                    <button 
+                        v-for="item in navItems" 
+                        :key="item.id"
+                        @click="currentView = item.id"
+                        :class="currentView === item.id ? 'bg-primary' : 'bg-surface hover:bg-surface'"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300">
+                        <i :data-lucide="item.icon" class="w-5 h-5"></i>
+                        <span>{{ item.name }}</span>
+                    </button>
+                </nav>
+                
+                <div class="p-4 border-t border-surface">
+                    <div v-if="userInfo" class="flex items-center gap-3 mb-4">
+                        <img :src="userInfo.avatar || 'https://via.placeholder.com/40'" class="w-10 h-10 rounded-full">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium truncate">{{ userInfo.nickname || '用户' }}</p>
+                            <p class="text-sm text-gray-400">余额: {{ userInfo.balance || 0 }}</p>
+                        </div>
+                    </div>
+                    <button 
+                        v-if="userInfo"
+                        @click="logout"
+                        class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-red-500 text-white py-2 rounded-xl transition-all duration-300">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                        退出登录
+                    </button>
+                    <button 
+                        v-if="!userInfo"
+                        @click="showLoginModal = true"
+                        class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-primary text-white py-2 rounded-xl transition-all duration-300">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        微信登录
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="flex-1 ml-64 p-8">
+                <!-- Dashboard -->
+                <div v-if="currentView === 'dashboard'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">工作台</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-card rounded-xl p-6 border border-surface">
+                            <div class="flex items-center justify-between mb-4">
+                                <i data-lucide="image" class="w-8 h-8 text-primary"></i>
+                                <span class="text-2xl font-bold">0</span>
+                            </div>
+                            <p class="text-gray-400">文生图任务</p>
+                        </div>
+                        <div class="bg-card rounded-xl p-6 border border-surface">
+                            <div class="flex items-center justify-between mb-4">
+                                <i data-lucide="layers" class="w-8 h-8 text-secondary"></i>
+                                <span class="text-2xl font-bold">0</span>
+                            </div>
+                            <p class="text-gray-400">图生图任务</p>
+                        </div>
+                        <div class="bg-card rounded-xl p-6 border border-surface">
+                            <div class="flex items-center justify-between mb-4">
+                                <i data-lucide="crop" class="w-8 h-8 text-accent"></i>
+                                <span class="text-2xl font-bold">0</span>
+                            </div>
+                            <p class="text-gray-400">抠图任务</p>
+                        </div>
+                        <div class="bg-card rounded-xl p-6 border border-surface">
+                            <div class="flex items-center justify-between mb-4">
+                                <i data-lucide="users" class="w-8 h-8 text-secondary"></i>
+                                <span class="text-2xl font-bold">0</span>
+                            </div>
+                            <p class="text-gray-400">换脸任务</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-xl p-6 border border-surface">
+                        <h3 class="text-xl font-bold mb-4">快速开始</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button 
+                                @click="currentView = 'text-to-image'"
+                                class="bg-surface hover:bg-primary p-6 rounded-xl transition-all duration-300 text-left">
+                                <i data-lucide="type" class="w-8 h-8 mb-2"></i>
+                                <p class="font-medium">文生图</p>
+                                <p class="text-sm text-gray-400">文字生成图片</p>
+                            </button>
+                            <button 
+                                @click="currentView = 'image-to-image'"
+                                class="bg-surface hover:bg-secondary p-6 rounded-xl transition-all duration-300 text-left">
+                                <i data-lucide="image-plus" class="w-8 h-8 mb-2"></i>
+                                <p class="font-medium">图生图</p>
+                                <p class="text-sm text-gray-400">图片生成图片</p>
+                            </button>
+                            <button 
+                                @click="currentView = 'batch-matting'"
+                                class="bg-surface hover:bg-accent p-6 rounded-xl transition-all duration-300 text-left">
+                                <i data-lucide="scissors" class="w-8 h-8 mb-2"></i>
+                                <p class="font-medium">批量抠图</p>
+                                <p class="text-sm text-gray-400">智能去除背景</p>
+                            </button>
+                            <button 
+                                @click="currentView = 'face-swap'"
+                                class="bg-surface hover:bg-secondary p-6 rounded-xl transition-all duration-300 text-left">
+                                <i data-lucide="user-switch" class="w-8 h-8 mb-2"></i>
+                                <p class="font-medium">智能换脸</p>
+                                <p class="text-sm text-gray-400">模特换脸+背景处理</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Text to Image -->
+                <div v-if="currentView === 'text-to-image'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">文生图</h2>
+                    <text-to-image @task-created="onTaskCreated"></text-to-image>
+                </div>
+                
+                <!-- Image to Image -->
+                <div v-if="currentView === 'image-to-image'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">图生图</h2>
+                    <image-to-image @task-created="onTaskCreated"></image-to-image>
+                </div>
+                
+                <!-- Batch Matting -->
+                <div v-if="currentView === 'batch-matting'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">批量抠图</h2>
+                    <batch-matting @task-created="onTaskCreated"></batch-matting>
+                </div>
+                
+                <!-- Face Swap -->
+                <div v-if="currentView === 'face-swap'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">智能换脸</h2>
+                    <face-swap @task-created="onTaskCreated"></face-swap>
+                </div>
+                
+                <!-- Tasks History -->
+                <div v-if="currentView === 'tasks'" class="space-y-6">
+                    <h2 class="text-3xl font-bold mb-6">任务历史</h2>
+                    <task-history></task-history>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+</html>

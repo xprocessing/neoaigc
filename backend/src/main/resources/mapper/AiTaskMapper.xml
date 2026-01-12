@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neoaigc.mapper.AiTaskMapper">
+
+    <resultMap id="BaseResultMap" type="com.neoaigc.entity.AiTask">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="type" property="type"/>
+        <result column="prompt" property="prompt"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="result_url" property="resultUrl"/>
+        <result column="status" property="status"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.neoaigc.entity.AiTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_tasks (user_id, type, prompt, image_url, result_url, status, error_message, created_at, updated_at)
+        VALUES (#{userId}, #{type}, #{prompt}, #{imageUrl}, #{resultUrl}, #{status}, #{errorMessage}, NOW(), NOW())
+    </insert>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM ai_tasks WHERE id = #{id}
+    </select>
+
+    <update id="update" parameterType="com.neoaigc.entity.AiTask">
+        UPDATE ai_tasks
+        <set>
+            <if test="resultUrl != null">result_url = #{resultUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT * FROM ai_tasks WHERE user_id = #{userId} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByUserIdAndType" resultMap="BaseResultMap">
+        SELECT * FROM ai_tasks 
+        WHERE user_id = #{userId} AND type = #{type}
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>

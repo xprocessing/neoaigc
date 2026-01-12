@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neoaigc.mapper.TemplateMapper">
+
+    <resultMap id="BaseResultMap" type="com.neoaigc.entity.Template">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="type" property="type"/>
+        <result column="prompt" property="prompt"/>
+        <result column="preview_image" property="previewImage"/>
+        <result column="sort" property="sort"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM templates WHERE status = 1 ORDER BY sort ASC, created_at DESC
+    </select>
+
+    <select id="findByType" resultMap="BaseResultMap">
+        SELECT * FROM templates WHERE type = #{type} AND status = 1 ORDER BY sort ASC, created_at DESC
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM templates WHERE id = #{id}
+    </select>
+
+</mapper>

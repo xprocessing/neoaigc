@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neoaigc.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.neoaigc.entity.User">
+        <id column="id" property="id"/>
+        <result column="open_id" property="openId"/>
+        <result column="union_id" property="unionId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="balance" property="balance"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="findByOpenId" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE open_id = #{openId}
+    </select>
+
+    <insert id="insert" parameterType="com.neoaigc.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (open_id, union_id, nickname, avatar, balance, created_at, updated_at)
+        VALUES (#{openId}, #{unionId}, #{nickname}, #{avatar}, #{balance}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.neoaigc.entity.User">
+        UPDATE users
+        <set>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="balance != null">balance = #{balance},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+
+</mapper>
