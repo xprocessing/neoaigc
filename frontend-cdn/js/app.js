@@ -1,8 +1,9 @@
 // NeoAI GC Vue Application
 const { createApp, ref, onMounted } = Vue;
 
-// API Base URL
-const API_BASE = 'http://localhost:8080/api';
+// API Base URL - configurable for different environments
+// Use env variable if available, otherwise default to localhost
+const API_BASE = window.API_BASE_URL || 'http://localhost:8080/api';
 
 // API Helper
 const api = {
@@ -430,7 +431,7 @@ const BatchMatting = {
             </div>
         </div>
     `,
-    setup() {
+    setup(props, { emit }) {
         const images = ref([]);
         const results = ref([]);
         const processing = ref(false);
@@ -586,7 +587,7 @@ const FaceSwap = {
             </div>
         </div>
     `,
-    setup() {
+    setup(props, { emit }) {
         const modelFile = ref(null);
         const modelImage = ref('');
         const faceFile = ref(null);

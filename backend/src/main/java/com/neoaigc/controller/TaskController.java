@@ -3,6 +3,8 @@ package com.neoaigc.controller;
 import com.neoaigc.entity.AiTask;
 import com.neoaigc.mapper.AiTaskMapper;
 import com.neoaigc.service.HunyuanAiService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,8 @@ import java.util.UUID;
 @CrossOrigin(origins = "*")
 public class TaskController {
 
+    private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
+
     @Autowired
     private AiTaskMapper taskMapper;
 
@@ -45,8 +49,11 @@ public class TaskController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             HttpServletRequest request) {
 
+        logger.info("接收到创建任务请求，类型: {}, 用户: {}", type, request.getAttribute("userId"));
+
         String userId = (String) request.getAttribute("userId");
         if (userId == null) {
+            logger.warn("创建任务失败: 未授权用户");
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "Unauthorized");
@@ -57,7 +64,9 @@ public class TaskController {
             // 处理文件上传
             String imageUrl = null;
             if (file != null && !file.isEmpty()) {
+                logger.info("开始上传文件，原始文件名: {}", file.getOriginalFilename());
                 imageUrl = uploadFile(file);
+                logger.info("文件上传成功，保存路径: {}", imageUrl);
             }
 
             // 创建任务
@@ -76,9 +85,11 @@ public class TaskController {
             result.put("success", true);
             result.put("taskId", task.getId());
             result.put("message", "Task created successfully");
+            logger.info("任务创建成功，任务ID: {}", task.getId());
             return result;
 
         } catch (Exception e) {
+            logger.error("创建任务失败: {}", e.getMessage(), e);
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "Failed to create task: " + e.getMessage());
@@ -138,41 +149,67 @@ public class TaskController {
      * 上传文件
      */
     private String uploadFile(MultipartFile file) throws IOException {
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-        Path path = Paths.get(uploadPath, fileName);
-        Files.createDirectories(path.getParent());
-        Files.write(path, file.getBytes());
+        // 验证文件大小
+        long maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.getSize() > maxSize) {
+            throw new IOException("File size exceeds the limit of 50MB");
+        }
+        
+        // 验证文件类型
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IOException("Only image files are allowed");
+        }
+        
+        // 获取文件扩展名
+        String originalFileName = file.getOriginalFilename();
+        String fileExtension = "";
+        if (originalFileName != null && originalFileName.contains(".")) {
+            fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+        }
+        
+        // 生成唯一文件名
+        String fileName = UUID.randomUUID().toString() + fileExtension;
+        
+        // 创建上传目录
+        Path uploadDirPath = Paths.get(uploadPath);
+        Files.createDirectories(uploadDirPath);
+        
+        // 保存文件
+        Path filePath = uploadDirPath.resolve(fileName);
+        Files.write(filePath, file.getBytes());
+        
+        // 返回相对路径
         return "/uploads/" + fileName;
     }
 
     /**
      * 异步执行任务
      */
-    private void executeTask(AiTask task) {
-        new Thread(() -> {
-            try {
-                // 更新状态为处理中
-                task.setStatus(AiTask.TaskStatus.PROCESSING);
-                taskMapper.update(task);
+    @org.springframework.scheduling.annotation.Async("taskExecutor")
+    public void executeTask(AiTask task) {
+        try {
+            // 更新状态为处理中
+            task.setStatus(AiTask.TaskStatus.PROCESSING);
+            taskMapper.update(task);
 
-                // 调用AI服务
-                String resultUrl = switch (task.getType()) {
-                    case TEXT_TO_IMAGE -> hunyuanAiService.textToImage(task.getPrompt());
-                    case IMAGE_TO_IMAGE -> hunyuanAiService.imageToImage(task.getImageUrl(), task.getPrompt());
-                    case BATCH_MATTING -> hunyuanAiService.removeBackground(task.getImageUrl());
-                    case FACE_SWAP -> hunyuanAiService.faceSwap(task.getImageUrl(), task.getPrompt());
-                };
+            // 调用AI服务
+            String resultUrl = switch (task.getType()) {
+                case TEXT_TO_IMAGE -> hunyuanAiService.textToImage(task.getPrompt());
+                case IMAGE_TO_IMAGE -> hunyuanAiService.imageToImage(task.getImageUrl(), task.getPrompt());
+                case BATCH_MATTING -> hunyuanAiService.removeBackground(task.getImageUrl());
+                case FACE_SWAP -> hunyuanAiService.faceSwap(task.getImageUrl(), task.getPrompt());
+            };
 
-                // 更新结果
-                task.setResultUrl(resultUrl);
-                task.setStatus(AiTask.TaskStatus.COMPLETED);
-                taskMapper.update(task);
+            // 更新结果
+            task.setResultUrl(resultUrl);
+            task.setStatus(AiTask.TaskStatus.COMPLETED);
+            taskMapper.update(task);
 
-            } catch (Exception e) {
-                task.setStatus(AiTask.TaskStatus.FAILED);
-                task.setErrorMessage(e.getMessage());
-                taskMapper.update(task);
-            }
-        }).start();
+        } catch (Exception e) {
+            task.setStatus(AiTask.TaskStatus.FAILED);
+            task.setErrorMessage(e.getMessage());
+            taskMapper.update(task);
+        }
     }
 }
