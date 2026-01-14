@@ -1,9 +1,15 @@
 // NeoAI GC Vue Application
-const { createApp, ref, onMounted } = Vue;
+const { createApp, ref, onMounted, computed } = Vue;
 
 // API Base URL - configurable for different environments
 // Use env variable if available, otherwise default to localhost
 const API_BASE = window.API_BASE_URL || 'http://localhost:8080/api';
+
+// AI服务提供商配置
+const AI_PROVIDERS = {
+    tencent: { name: '腾讯混元AI', value: 'tencent' },
+    aliyun: { name: '阿里云百炼AI', value: 'aliyun' }
+};
 
 // API Helper
 const api = {
@@ -142,6 +148,7 @@ const TextToImage = {
                 const formData = new FormData();
                 formData.append('type', 'TEXT_TO_IMAGE');
                 formData.append('prompt', prompt.value);
+                formData.append('provider', localStorage.getItem('aiProvider') || 'tencent');
                 
                 const response = await axios.post(`${API_BASE}/task/create`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
@@ -329,6 +336,7 @@ const ImageToImage = {
                 formData.append('type', 'IMAGE_TO_IMAGE');
                 formData.append('prompt', prompt.value);
                 formData.append('file', imageFile.value);
+                formData.append('provider', localStorage.getItem('aiProvider') || 'tencent');
                 
                 const response = await axios.post(`${API_BASE}/task/create`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
@@ -489,6 +497,7 @@ const BatchMatting = {
                     formData.append('type', 'BATCH_MATTING');
                     formData.append('prompt', 'Remove background');
                     formData.append('file', images.value[i].file);
+                    formData.append('provider', localStorage.getItem('aiProvider') || 'tencent');
                     
                     const response = await axios.post(`${API_BASE}/task/create`, formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
@@ -665,6 +674,7 @@ const FaceSwap = {
                 formData.append('type', 'FACE_SWAP');
                 formData.append('prompt', prompt);
                 formData.append('file', modelFile.value);
+                formData.append('provider', localStorage.getItem('aiProvider') || 'tencent');
                 
                 const response = await axios.post(`${API_BASE}/task/create`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
@@ -836,6 +846,28 @@ const App = {
         const qrCodeUrl = ref('');
         const pendingTaskData = ref(null);
         
+        // AI服务提供商选择
+        const currentAiProvider = ref(localStorage.getItem('aiProvider') || 'tencent');
+        const aiProviders = ref(Object.values(AI_PROVIDERS));
+        
+        // 切换AI服务提供商
+        const switchAiProvider = (providerValue) => {
+            currentAiProvider.value = providerValue;
+            localStorage.setItem('aiProvider', providerValue);
+            toast.info(`已切换到 ${AI_PROVIDERS[providerValue].name}`);
+            
+            // 通知所有AI服务组件提供商已切换
+            const event = new CustomEvent('ai-provider-changed', {
+                detail: { provider: providerValue }
+            });
+            document.dispatchEvent(event);
+        };
+        
+        // 获取当前AI服务提供商名称
+        const currentAiProviderName = computed(() => {
+            return AI_PROVIDERS[currentAiProvider.value].name;
+        });
+        
         const navItems = [
             { id: 'dashboard', name: '工作台', icon: 'layout-dashboard' },
             { id: 'text-to-image', name: '文生图', icon: 'type' },
@@ -944,7 +976,12 @@ const App = {
             getQrCodeForModal,
             logout,
             onTaskCreated,
-            onRequireLogin
+            onRequireLogin,
+            // AI服务提供商相关
+            currentAiProvider,
+            aiProviders,
+            currentAiProviderName,
+            switchAiProvider
         };
     }
 };

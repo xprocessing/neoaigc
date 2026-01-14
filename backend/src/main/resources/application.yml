@@ -30,6 +30,10 @@ mybatis:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# AI服务配置
+ai:
+  provider: ${AI_PROVIDER:tencent} # 默认使用腾讯AI，可选值：tencent, aliyun
+
 # 腾讯混元AI配置
 hunyuan:
   api:
@@ -38,6 +42,14 @@ hunyuan:
     region: ${HUNYUAN_REGION:ap-guangzhou}
     image-gen-endpoint: https://hunyuan.tencentcloudapi.com
     timeout: 30000
+
+# 阿里云百炼AI配置
+aliyun:
+  bailian:
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:your-access-key-id}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:your-access-key-secret}
+    endpoint: https://bailian.console.aliyun.com
+    api-version: 2023-09-01
 
 # 微信登录配置
 wechat:

@@ -90,6 +90,14 @@
             <version>3.1.596</version>
         </dependency>
         
+        <!-- 阿里云SDK核心依赖（如需使用） -->
+        <!-- 暂时注释，因为当前不需要特定的阿里云SDK -->
+        <!-- <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>aliyun-java-sdk-core</artifactId>
+            <version>4.6.1</version>
+        </dependency> -->
+        
         <!-- HTTP Client -->
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
@@ -109,6 +117,7 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
     
     <build>

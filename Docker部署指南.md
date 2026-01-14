@@ -19,7 +19,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone <repository-url>
+git clone https://github.com/xprocessing/neoaigc.git
 cd neoaigc
 
 # 2. 修改环境变量

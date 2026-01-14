@@ -2,7 +2,7 @@ package com.neoaigc.controller;
 
 import com.neoaigc.entity.AiTask;
 import com.neoaigc.mapper.AiTaskMapper;
-import com.neoaigc.service.HunyuanAiService;
+import com.neoaigc.service.AiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,13 @@ public class TaskController {
     private AiTaskMapper taskMapper;
 
     @Autowired
-    private HunyuanAiService hunyuanAiService;
+    private AiService aiService; // 默认AI服务
+    
+    @Autowired
+    private AiService tencentAiService; // 腾讯混元AI服务
+    
+    @Autowired
+    private AiService aliyunAiService; // 阿里云百炼AI服务
 
     @Value("${file.upload-path}")
     private String uploadPath;
@@ -47,6 +53,7 @@ public class TaskController {
             @RequestParam("type") String type,
             @RequestParam("prompt") String prompt,
             @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "provider", defaultValue = "tencent") String provider,
             HttpServletRequest request) {
 
         logger.info("接收到创建任务请求，类型: {}, 用户: {}", type, request.getAttribute("userId"));
@@ -75,6 +82,7 @@ public class TaskController {
             task.setType(AiTask.TaskType.valueOf(type));
             task.setPrompt(prompt);
             task.setImageUrl(imageUrl);
+            task.setProvider(provider); // 设置AI服务提供商
             task.setStatus(AiTask.TaskStatus.PENDING);
             taskMapper.insert(task);
 
@@ -193,12 +201,20 @@ public class TaskController {
             task.setStatus(AiTask.TaskStatus.PROCESSING);
             taskMapper.update(task);
 
+            // 根据用户选择的AI服务提供商选择对应的服务
+            AiService selectedAiService = aiService; // 默认服务
+            if ("aliyun".equals(task.getProvider())) {
+                selectedAiService = aliyunAiService;
+            } else if ("tencent".equals(task.getProvider())) {
+                selectedAiService = tencentAiService;
+            }
+
             // 调用AI服务
             String resultUrl = switch (task.getType()) {
-                case TEXT_TO_IMAGE -> hunyuanAiService.textToImage(task.getPrompt());
-                case IMAGE_TO_IMAGE -> hunyuanAiService.imageToImage(task.getImageUrl(), task.getPrompt());
-                case BATCH_MATTING -> hunyuanAiService.removeBackground(task.getImageUrl());
-                case FACE_SWAP -> hunyuanAiService.faceSwap(task.getImageUrl(), task.getPrompt());
+                case TEXT_TO_IMAGE -> selectedAiService.textToImage(task.getPrompt());
+                case IMAGE_TO_IMAGE -> selectedAiService.imageToImage(task.getImageUrl(), task.getPrompt());
+                case BATCH_MATTING -> selectedAiService.removeBackground(task.getImageUrl());
+                case FACE_SWAP -> selectedAiService.faceSwap(task.getImageUrl(), task.getPrompt());
             };
 
             // 更新结果

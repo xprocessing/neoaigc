@@ -14,6 +14,7 @@ public class AiTask {
     private String resultUrl;
     private TaskStatus status;
     private String errorMessage;
+    private String provider; // AI服务提供商
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -94,6 +95,14 @@ public class AiTask {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
     }
 
     public LocalDateTime getCreatedAt() {
